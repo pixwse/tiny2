@@ -1,4 +1,5 @@
-import os
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
 import torch
 import torch.nn.functional as F
 
@@ -14,7 +15,6 @@ https://github.com/XPixelGroup/HAT
 "Chen et al. 2023, Activating More Pixels in Image Super-Resolution Transformer"
 The HAT code must be accessible in the Python path.
 """
-
 
 class SuperresParams(utils.DictParamsMixin):
     """Parameters controlling the super-resolution used in some generators
@@ -73,8 +73,7 @@ class HatModel:
             upsampler='pixelshuffle',
             resi_connection='1conv')
 
-        full_path = os.path.join(params.path, params.checkpoint)
-        state_dict = torch.load(full_path)
+        state_dict = torch.load(params.checkpoint)
         self.device = device
         self.model.load_state_dict(state_dict['params_ema'])
         self.model.to(device)
@@ -118,11 +117,11 @@ def get_model(params):
 
 def demo_superres():
 
-    image_path = 'YOUR 96x96 IMAGE HERE'
+    image_path = 'demo_example/cup3.jpg'
     image = utils.load_tensor_image(image_path)
 
     params = SuperresParams()
-    params.pre_resolution = torch.Size((96, 96))
+    params.pre_resolution = torch.Size((128, 128))
     params.post_resolution = torch.Size((512, 512))
     model = get_model(params)
 

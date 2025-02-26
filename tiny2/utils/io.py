@@ -1,8 +1,9 @@
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
 import filelock, json, os, zipfile
 
 # ----------------------------------------------------------------------------
 # Basic IO helpers
-
 
 def ensure_dir_exists(name: str):
     """Make sure that a directory exists (create it if it doesn't)
@@ -25,7 +26,6 @@ def save_json_file(data: object, filename: str):
     with open(filename, 'wt') as file:
         json.dump(data, file, indent=2, sort_keys=True)
         file.write('\n')
-
 
 # ----------------------------------------------------------------------------
 # Multi-process-safe file IO

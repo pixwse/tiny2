@@ -1,8 +1,8 @@
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
 import torch
-
 from .diffmodel import DiffModel
 from . import textinv, nulltextinv
-
 
 """Common data class for storing various adaptations of a diffusion model.
 

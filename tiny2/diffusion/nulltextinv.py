@@ -1,3 +1,5 @@
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
 import torch
 from torch.optim.adam import Adam
 import torch.nn.functional as nnf
@@ -10,7 +12,6 @@ Inspired by the paper and the author's original repo
 https://github.com/google/prompt-to-prompt (Apache 2.0 license), but rewritten
 from scratch to fit our framework.
 """
-
 
 class NullInversionData:
     """Class representing the output from a null-text inversion procedure.

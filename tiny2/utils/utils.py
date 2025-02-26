@@ -1,15 +1,17 @@
-import copy, os, random, typing
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
+import copy, logging, os, random, typing
 import numpy as np
 import torch
 from PIL import Image
 from torchvision.utils import save_image
 from torchvision import transforms
-from torchvision.transforms import functional as TF
 import torch.nn.functional as F
+
+from .io import *
 
 """Common tools for DL with pytorch.
 """
-
 
 # ------------------------------------------------------------------------------
 # Parameter structs
@@ -167,8 +169,9 @@ class DictParamsMixin:
                 raise Exception(f'unknown field in input: {in_key}')
 
             our_val = self.__getattribute__(in_key)
-            if isinstance(our_val, DictParamsMixin):
-                our_val.from_dict(in_val)
+            if isinstance(our_val, DictParamsMixin): 
+                if in_val is not None:
+                    our_val.from_dict(in_val)
             else:
                 self.__setattr__(in_key, in_val)
 
@@ -209,20 +212,37 @@ class DictParamsMixin:
 # ------------------------------------------------------------------------------
 # Logging
 
-def get_default_logger(name: str, path: str):
-    pass # TODO
+def get_default_logger(
+        name: str, 
+        path: str) -> logging.Logger:
+    """Create a logger with our default style
+
+    Args:
+      name: Logger (and log file) name
+      path: Directory where log files are stored (created if needed)
+    """
+    ensure_dir_exists(path)
+
+    logging.addLevelName(logging.INFO, 'INF')
+    logging.addLevelName(logging.WARNING, 'WRN')
+    logging.addLevelName(logging.ERROR, 'ERR')
+
+    logging.basicConfig(
+        encoding='utf-8',
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s [%(name)s] %(message)s', 
+        datefmt="%Y-%m-%dT%H:%M:%S")
+
+    logger = logging.getLogger('main')
+    return logger
 
 
-def NullLogger():
-    # TODO: Check if this already exists
-    def info(text: str):
-        pass
-
-    def warning(text: str):
-        pass
-
-    def error(text: str):
-        pass
+def get_null_logger() -> logging.Logger:
+    """Return a logger that has no effect
+    """
+    logger = logging.getLogger("null_logger")
+    logger.addHandler(logging.NullHandler())
+    return logger
 
 
 # ----------------------------------------------------------------------------
@@ -247,7 +267,7 @@ def set_random_seed(seed: int) -> None:
 
 
 def run_chunkwise(
-        model: torch.Module, 
+        model: torch.nn.Module, 
         inputs: torch.Tensor, 
         chunk_size: int) -> torch.Tensor:
     """Run a model on the input, chunk by chunk.
@@ -326,15 +346,12 @@ def resize_image(
         raise ValueError(f'unexpected shape: {source.shape}')
 
 
-# -----------------------------------------------------------------------------
-# Torch IO
-
-
-def save_tensor_image(image: torch.Tensor, path) -> None:
+def save_tensor_image(image: torch.Tensor, path: str) -> None:
     """Save a tensor as an image file.
     If the tensor is 4-dimensional, save each slice as a separate file.
     """
-    # TODO: Create dir if needed
+
+    ensure_dir_exists(os.path.dirname(path))
 
     if len(image.shape) == 4 and image.shape[0] > 1:
         (base_path, ext) = os.path.splitext(path)
@@ -353,6 +370,12 @@ def load_tensor_image(path: str) -> torch.Tensor:
     tensor = transforms.ToTensor()(image)
     tensor = tensor.to(default_device())
     return tensor
+
+
+def load_image_batch(path: str, names: list[str]) -> torch.Tensor:
+    image_list = [load_tensor_image(os.path.join(path, n)) for n in names]
+    images = torch.stack(image_list)
+    return images
 
 
 # ----------------------------------------------------------------------------

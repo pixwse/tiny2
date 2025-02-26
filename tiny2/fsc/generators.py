@@ -1,3 +1,5 @@
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
 import gc, logging, random, typing
 import torch
 import torch.nn.functional as F
@@ -62,7 +64,7 @@ class TintParams(utils.DictParamsMixin):
 
         # Parameters of the basic SdTextinv method (diffusion and textual
         # inversion model)
-        self.base = SdTextinvParams()
+        self.base_sd_textinv = SdTextinvParams()
 
         # Blend alpha for combining inverted support exampls and new noise
         # contributions. Setting to 1.0 will ignore inverted supports and
@@ -75,19 +77,8 @@ class TintParams(utils.DictParamsMixin):
         # If enabled, the fixed alpha parameter above will be ignored.
         self.random_alpha = False
 
-        # If set to true, the latents will be normalized back to the same norm
-        # as the support example. This should be set to True unless 
-        # alpha = 1.0, in which case this method will be rather similar to the
-        # original SdTextinv method (but we use the adjusted null embeddings
-        # instead) (original method)
-        self.renormalize_latents = False
-
-        # This is the new default method, as described in the CVPR 2024 paper.
-        self.tint_normalization = True
-
-        # Set to true to run the image generation in FP16.
-        # Note: This has the additional effect that the generator can only be
-        # specialized once.
+        # Set to true to run the image generation in FP16. Note: This has the
+        # additional effect that the generator can only be specialized once.
         self.gen_fp16 = False
 
 
@@ -96,7 +87,7 @@ class IGenerator(ABC):
     """
 
     def __init__(self):
-        self.logger = utils.NullLogger()
+        self.logger = utils.get_null_logger()
 
     def set_logger(self, logger: logging.Logger):
         self.logger = logger
@@ -203,13 +194,13 @@ class SdTextinvGenerator(IGenerator):
 
         # For debugging, provide the option to skip specialization
         if self.params.bypass_textinv:
-            self.logger.warning('generator', 'specialization_bypassed')
+            self.logger.warning('SdTextinvGenerator: specialization bypassed for debug purposes')
             self.specialized = True
             self.template = 'A photo of something'
             return None
 
         # Run the actual textinv training
-        self.logger.info('generator/textinv/training', 'started')
+        self.logger.info('SdTextinvGenerator: starting textinv training')
         self.textinv_model = t2diff.train_textinv(
             self.diffmodel, 
             self.resized_supports, 
@@ -222,7 +213,7 @@ class SdTextinvGenerator(IGenerator):
         if self.params.gen_fp16:
             self.diffmodel.half()
 
-        self.logger.info('generator/textinv/training', 'done')
+        self.logger.info('SdTextinvGenerator: textinv training done')
         self.specialized = True
         self.image_counter = 0
 
@@ -238,7 +229,7 @@ class SdTextinvGenerator(IGenerator):
         return save_data
 
     def load_specialization(self, file_name: str):
-        self.logger.info('generator/sdtextinv/load', 'started')
+        self.logger.info('SdTextinvGenerator: loading specialization')
 
         # Make sure that the remaints of any previous model are deallocated
         self.diffmodel = None
@@ -256,7 +247,7 @@ class SdTextinvGenerator(IGenerator):
 
         self.specialized = True
         self.image_counter = 0
-        self.logger.info('generator/sdtextinv/load', 'done')
+        self.logger.info('SdTextinvGenerator: done loading specialization')
 
     def __call__(self) -> torch.Tensor:
         """Generate one example looking like the inputs.
@@ -292,8 +283,12 @@ class TintGenerator(IGenerator):
         self.debug_fixed_support_no = None # For debugging
 
         # Modules
-        self.base_generator = SdTextinvGenerator(params.base)
+        self.base_generator = SdTextinvGenerator(params.base_sd_textinv)
         self.nulltext_module = None
+
+    def set_logger(self, logger: logging.Logger):
+        self.base_generator.set_logger(logger)
+        self.logger = logger
 
     def specialize(self, inputs: torch.Tensor, description: str = '') -> typing.Any:
         """Specialize the generator to generate images similar to the inputs.
@@ -305,34 +300,31 @@ class TintGenerator(IGenerator):
         nof_supports = inputs.shape[0]
 
         # First, specialize the base generator (run the textual inversion)
-        self.logger.info('specialize/textinv', 'started')
+        self.logger.info('TintGenerator: starting textinv training')
         textinv_data = self.base_generator.specialize(inputs, description)
         assert self.base_generator.diffmodel # Should be created by specialize
-        self.logger.info('specialize/textinv', 'done')
+        self.logger.info('TintGenerator: textinv training done')
 
         # Save (enable for debugging, to avoid having to run the entire thing every time)
         patch = t2diff.DiffModelPatch()
         patch.set_base_model_data(self.base_generator.diffmodel)
         patch.set_textinv_data([], textinv_data)
-        # patch.save(f'{job_output_dir}/temp_diffmodel_patch.pth')
 
         # Also run a null-inversion on each input
-        self.logger.info('specialize/nullinv', 'started')
+        self.logger.info('TintGenerator: starting nulltext optimization')
         self.nulltext_module = t2diff.NullInversion(
             self.base_generator.diffmodel)
 
         self.nullinv_data : list[t2diff.NullInversionData] = []
         for ix in range(nof_supports):
-            self.logger.info('specialize/nullinv/support_no', ix)
+            self.logger.info(f'TintGenerator: nulltext inversion of support ex {ix}')
             nullinv_data = self.nulltext_module.invert(
                 self.base_generator.resized_supports[ix:ix+1], 
                 self.base_generator.template)
             self.nullinv_data.append(nullinv_data)
             nullinv_data.prompt = self.base_generator.template
             patch.append_nulltext_data(nullinv_data)
-
-        self.logger.info('specialize/nullinv', 'done')
-        # patch.save(f'{pxdm.get_job_output_dir()}/temp_diffmodel_patch.pth') # For debugging
+        self.logger.info('TintGenerator: nulltext optimization done')
 
         if self.params.gen_fp16:
             self.base_generator.diffmodel.half()
@@ -340,8 +332,6 @@ class TintGenerator(IGenerator):
                 nid.half()
 
         self.image_counter = 0
-        self.logger.info('specialize/init_scales', 'done')
-
         self.specialized = True
         save_data = {
             'image_size': self.base_generator.image_size,

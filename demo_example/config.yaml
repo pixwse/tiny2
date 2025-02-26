@@ -1,0 +1,37 @@
+
+# Input images (e.g. support images if used for few-shot learning)
+inputs:
+  - demo_example/cup1.jpg
+  - demo_example/cup2.jpg
+  - demo_example/cup3.jpg
+  
+# Output dir, will contain images, logs and intermediates
+output_dir: output/demo_example
+
+# Number of examples to generate
+nof_examples: 20
+
+# Set to True to output directly to a set of zip files
+output_zip: False
+
+# Algorithm parameters. Default values are used for omitted parameters.
+# See the param structs in generators.py
+generator:
+  alpha: 1.0
+  gen_fp16: False
+
+  base_sd_textinv:
+    sd_model_name: 'runwayml/stable-diffusion-v1-5'
+    gen_iterations: 25
+    cfg: 7.5
+    gen_fp16: False
+    enable_superres: True
+
+    # Params for the textinv training, leave empty to use defaults
+    textinv:
+
+    # Parameters for the super-resolution preprocessing of inputs before
+    # textual inversion. Must be adjusted to match input image size.
+    superres:
+      pre_resolution: [128, 128]
+      post_resolution: [512, 512]

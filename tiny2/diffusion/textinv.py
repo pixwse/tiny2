@@ -1,3 +1,5 @@
+# Original source file from https://github.com/pixwse/tiny2
+# Copyright(c) 2025 Erik Landolsi, MIT license, see the LICENSE file.
 import random
 import torch
 import torch.nn.functional as F
@@ -607,7 +609,7 @@ def _do_train_textinv(
       vector. Note that the input model will also be updated with these new
       embeddings and is ready to use directly.
     """
-    logger.info('Preparing textinv training')
+    logger.info('textinv: preparing training')
     placeholder_tokens, placeholder_ids = _init_token_embeddings(
         model, 0, template, token_config)
 
@@ -651,9 +653,9 @@ def _do_train_textinv(
             model, template, params.intermediate_samples_filename_base, 500, 5)
 
     # Optimization loop
-    logger.info('Starting textinv training')
+    logger.info('textinv: starting training')
     for epoch_no in range(max_epochs):
-        logger.info(f'epoch_no: {epoch_no}')
+        logger.info(f'textinv: epoch_no: {epoch_no}')
 
         loss_sum = 0
         count = 0
@@ -709,8 +711,8 @@ def _do_train_textinv(
                 results_saver.poll()
 
         average_loss = loss_sum / count
-        logger.info(f'iteration_count: {count}')
-        logger.info(f'average_loss: {average_loss}')
+        logger.info(f'textinv: iteration_count: {count}')
+        logger.info(f'textinv: average_loss: {average_loss}')
 
     dict = make_textinv_dict(model, placeholder_tokens, placeholder_ids)
     return dict
@@ -805,4 +807,3 @@ def train_textinv_multitemplate(
 
     return _do_train_textinv(
         model, train_dataset, templates[0], token_config, logger, params)
-
