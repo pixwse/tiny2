@@ -1,4 +1,4 @@
-import argparse, yaml
+import argparse, traceback, yaml
 from tiny2 import fsc
 from tiny2 import utils
 
@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     # Load config
     with open(args.config, "rt") as file:
-        yamldata = yaml.load(file)
+        yamldata = yaml.safe_load(file)
 
     params = fsc.BatchGenParams()
     params.from_dict(yamldata)
@@ -24,4 +24,7 @@ if __name__ == '__main__':
     logger = utils.get_default_logger('generate', params.output_dir)
 
     # Run actual experiment
-    fsc.batch_generate(params, logger)
+    try:
+        fsc.batch_generate(params, logger)
+    except Exception as e:
+        logger.error(f'Exception caught: {traceback.format_exc()}')

@@ -28,6 +28,10 @@ class BatchGenParams(utils.DictParamsMixin):
         # Generative model
         self.generator = fsc.generators.TintParams()
 
+        # Set to True to load saved textinv/nulltext data from a previous run. This
+        # is useful for quickly creating more images similar the prior run.
+        self.load_specialization = False
+
         # Root directory of the output. One directory per class will be created
         # below this directory.
         self.output_dir: str = ''
@@ -53,7 +57,7 @@ def batch_generate(
     """
 
     utils.set_random_seed(129)
-    logger.info('batch_generate: paramters: ' + str(params.to_dict()))
+    logger.info('batch_generate: parameters: ' + str(params.to_dict()))
 
     # Ensure that all required dirs exist. Note: The intermediate 'episide0'
     # dir is to keep the same output format as for multi-episode experiments
@@ -85,7 +89,7 @@ def batch_generate(
 
     # Specialize the generator
     output_path = f'{specialization_dir}/specialization.pth'
-    if os.path.exists(output_path):
+    if params.load_specialization:
         logger.info('batch_generate: loading existing specialization')
         generator.load_specialization(output_path)
     else:
@@ -97,7 +101,7 @@ def batch_generate(
     log_interval = 50
     nof_example_images = 10
     image_no = 0
-    while generator.get_nof_accepted_examples() < params.examples:
+    while generator.get_nof_accepted_examples() < params.nof_examples:
 
         if image_no % log_interval == 0:
             logger.info(f'batch_generate: generating image {image_no}')
@@ -123,3 +127,5 @@ def batch_generate(
             logger.info(f'batch_generate: done generating image {image_no}')
     
         image_no += 1
+
+    logger.info(f'batch_generate: {image_no} images generated, all done!')

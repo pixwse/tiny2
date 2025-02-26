@@ -34,9 +34,18 @@ using
   ```
 This should create a set of output images in output/demo_example/gendata that
 should look reasonably similar to the support images in demo_examples (should
-be brown-ish cups in 128x128 resolution)
+be brown-ish cups in 128x128 resolution). The support images in demo_examples
+are from the CUB dataset [Wah et al. 2011, The caltech-ucsd birds-200-2011 dataset.
+Technical Report CNS-TR-2011-001]
 
-To experiment on your own images, make a new config file and edit the input image paths. The input image resolution also likely requires some consideration.
+To experiment on your own images, make a new config file and edit the input image
+paths. The input image resolution also likely requires some consideration.
+
+## Computational requirements
+The code was tested to run fine on an NVidia GeForce 4090 with 24 Gb VRAM. On this
+GPU, the textual inversion / null-text inversion steps in the provided example
+takes around 16 min. After these initial steps, it take around 1.5s for each new
+image.
 
 ## Adjusting parameters for input image size
 The default stable diffusion model used runs best at 512x512 resolution.
@@ -46,10 +55,9 @@ This will resample your images to 512x512 with bilinear interpolation.
 
 If your inputs are significantly smaller than 512x512, some combination of
 bilinear upsampling and super-resolution is needed. Check out the superres.py
-code and the HAT documentation for details and adjust the 
-superres/pre_resolution parameter in the config file. The post_resolution parameter should always
-match the intrinsic resolution of the diffusion model (512x512 if using
-defaults).
+code and the HAT documentation for details and adjust the superres/pre_resolution
+parameter in the config file. The post_resolution parameter should always match the
+intrinsic resolution of the diffusion model (512x512 if using defaults).
 
 ## License and citation
 The code is released under the MIT license, see the LICNSE file for details.

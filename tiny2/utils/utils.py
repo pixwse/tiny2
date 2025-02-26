@@ -215,10 +215,10 @@ class DictParamsMixin:
 def get_default_logger(
         name: str, 
         path: str) -> logging.Logger:
-    """Create a logger with our default style
+    """Create a logger with our default style, writing to console + log file
 
     Args:
-      name: Logger (and log file) name
+      name: Log file name
       path: Directory where log files are stored (created if needed)
     """
     ensure_dir_exists(path)
@@ -230,8 +230,12 @@ def get_default_logger(
     logging.basicConfig(
         encoding='utf-8',
         level=logging.INFO,
-        format='%(asctime)s %(levelname)s [%(name)s] %(message)s', 
-        datefmt="%Y-%m-%dT%H:%M:%S")
+        format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
+        datefmt="%Y-%m-%dT%H:%M:%S",
+        handlers=[
+            logging.FileHandler(os.path.join(path, f"{name}.log")),
+            logging.StreamHandler()]
+        )
 
     logger = logging.getLogger('main')
     return logger

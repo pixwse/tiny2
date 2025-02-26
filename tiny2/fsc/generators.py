@@ -151,7 +151,7 @@ class SdTextinvGenerator(IGenerator):
     def specialize(
             self, 
             inputs: torch.Tensor, 
-            description: str = '') -> typing.Any:
+            description: str = '') -> t2diff.DiffModelPatch:
         """Specialize the model to generate examples looking like the inputs
         """
 
@@ -174,8 +174,7 @@ class SdTextinvGenerator(IGenerator):
             with torch.no_grad():
                 self.resized_supports = self.superres.run(inputs)
 
-            # We can't fit the SR model and the diff model in memory at the
-            # same time.
+            # We can't fit the SR model and the diff model in memory at the same time.
             del self.superres
             self.superres = None
             gc.collect()
@@ -241,7 +240,7 @@ class SdTextinvGenerator(IGenerator):
         # Load the saved data and setup the model accirdingly
         save_data = torch.load(file_name)
         self.image_size = save_data['image_size']
-        patch : t2diff.DiffModelPatch = save_data['patch']
+        patch : t2diff.DiffModelPatch = save_data['diff_model_patch']
         t2diff.setup_saved_textinv(
             self.diffmodel, patch.get_textinv_embeddings())
 
@@ -301,19 +300,13 @@ class TintGenerator(IGenerator):
 
         # First, specialize the base generator (run the textual inversion)
         self.logger.info('TintGenerator: starting textinv training')
-        textinv_data = self.base_generator.specialize(inputs, description)
+        save_data = self.base_generator.specialize(inputs, description)
         assert self.base_generator.diffmodel # Should be created by specialize
         self.logger.info('TintGenerator: textinv training done')
 
-        # Save (enable for debugging, to avoid having to run the entire thing every time)
-        patch = t2diff.DiffModelPatch()
-        patch.set_base_model_data(self.base_generator.diffmodel)
-        patch.set_textinv_data([], textinv_data)
-
         # Also run a null-inversion on each input
         self.logger.info('TintGenerator: starting nulltext optimization')
-        self.nulltext_module = t2diff.NullInversion(
-            self.base_generator.diffmodel)
+        self.nulltext_module = t2diff.NullInversion(self.base_generator.diffmodel)
 
         self.nullinv_data : list[t2diff.NullInversionData] = []
         for ix in range(nof_supports):
@@ -323,7 +316,7 @@ class TintGenerator(IGenerator):
                 self.base_generator.template)
             self.nullinv_data.append(nullinv_data)
             nullinv_data.prompt = self.base_generator.template
-            patch.append_nulltext_data(nullinv_data)
+            save_data['diff_model_patch'].append_nulltext_data(nullinv_data)
         self.logger.info('TintGenerator: nulltext optimization done')
 
         if self.params.gen_fp16:
@@ -333,10 +326,6 @@ class TintGenerator(IGenerator):
 
         self.image_counter = 0
         self.specialized = True
-        save_data = {
-            'image_size': self.base_generator.image_size,
-            'diff_model_patch': patch
-        }
         return save_data
 
     def load_specialization(self, file_name: str):

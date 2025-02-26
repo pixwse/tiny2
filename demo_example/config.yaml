@@ -1,18 +1,23 @@
 
 # Input images (e.g. support images if used for few-shot learning)
 inputs:
-  - demo_example/cup1.jpg
-  - demo_example/cup2.jpg
-  - demo_example/cup3.jpg
+  - demo_example/bird1.jpg
+  - demo_example/bird2.jpg
+  - demo_example/bird3.jpg
+  - demo_example/bird4.jpg
+  - demo_example/bird5.jpg
   
 # Output dir, will contain images, logs and intermediates
 output_dir: output/demo_example
 
 # Number of examples to generate
-nof_examples: 20
+nof_examples: 100
 
 # Set to True to output directly to a set of zip files
 output_zip: False
+
+# Set to True to reuse saved textinv/nulltext from previous run 
+load_specialization: True
 
 # Algorithm parameters. Default values are used for omitted parameters.
 # See the param structs in generators.py
