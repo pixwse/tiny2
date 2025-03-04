@@ -17,7 +17,7 @@ nof_examples: 100
 output_zip: False
 
 # Set to True to reuse saved textinv/nulltext from previous run 
-load_specialization: True
+load_specialization: False
 
 # Algorithm parameters. Default values are used for omitted parameters.
 # See the param structs in generators.py
