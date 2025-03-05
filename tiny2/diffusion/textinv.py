@@ -60,7 +60,7 @@ class TextinvParams(utils.DictParamsMixin):
 
         # Only include time steps above this number in the textinv training.
         # Might help reduce artifacts due to upsampling of the input image.
-        self.min_timestep = 0
+        self.min_timestep = 250
 
         # Initial learning rate 
         self.init_lr = 1e-3
